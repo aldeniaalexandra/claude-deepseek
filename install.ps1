@@ -48,6 +48,7 @@ Set-StrictMode -Version Latest
 $script:ClaudeDeepSeekEnvironment = @{
     ANTHROPIC_BASE_URL             = 'https://api.deepseek.com/anthropic'
     ANTHROPIC_MODEL                = 'deepseek-v4-pro[1m]'
+    CLAUDE_CODE_SUBAGENT_MODEL     = 'deepseek-v4-flash'
 }
 
 function ConvertTo-PlainText {
@@ -150,11 +151,48 @@ function Invoke-ClaudeDeepSeek {
     }
 }
 
-Set-Alias -Name 'claude-deepseek' -Value Invoke-ClaudeDeepSeek
+function Invoke-ClaudeDeepSeekPro {
+    [CmdletBinding()]
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]] $Arguments
+    )
+
+    $saved = $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL']
+    $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL'] = 'deepseek-v4-pro[1m]'
+
+    try {
+        Invoke-ClaudeDeepSeek @Arguments
+    }
+    finally {
+        $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL'] = $saved
+    }
+}
+
+function Invoke-ClaudeDeepSeekFlash {
+    [CmdletBinding()]
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]] $Arguments
+    )
+
+    $saved = $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL']
+    $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL'] = 'deepseek-v4-flash'
+
+    try {
+        Invoke-ClaudeDeepSeek @Arguments
+    }
+    finally {
+        $script:ClaudeDeepSeekEnvironment['ANTHROPIC_MODEL'] = $saved
+    }
+}
+
 Set-Alias -Name 'cld' -Value Invoke-ClaudeDeepSeek
+Set-Alias -Name 'cld-pro' -Value Invoke-ClaudeDeepSeekPro
+Set-Alias -Name 'cld-flash' -Value Invoke-ClaudeDeepSeekFlash
 Set-Alias -Name 'cld-key' -Value Set-ClaudeDeepSeekKey
 
-Export-ModuleMember -Function Invoke-ClaudeDeepSeek, Set-ClaudeDeepSeekKey -Alias 'claude-deepseek', 'cld', 'cld-key'
+Export-ModuleMember -Function Invoke-ClaudeDeepSeek, Invoke-ClaudeDeepSeekPro, Invoke-ClaudeDeepSeekFlash, Set-ClaudeDeepSeekKey -Alias 'cld', 'cld-pro', 'cld-flash', 'cld-key'
 '@
 
 Set-Content -LiteralPath $targetModuleFile -Value $moduleContent -Encoding UTF8
@@ -162,6 +200,24 @@ Set-Content -LiteralPath $targetModuleFile -Value $moduleContent -Encoding UTF8
 $cldPs1 = @'
 Import-Module ClaudeDeepSeek
 Invoke-ClaudeDeepSeek @args
+
+if ($null -ne $LASTEXITCODE) {
+    exit $LASTEXITCODE
+}
+'@
+
+$cldProPs1 = @'
+Import-Module ClaudeDeepSeek
+Invoke-ClaudeDeepSeekPro @args
+
+if ($null -ne $LASTEXITCODE) {
+    exit $LASTEXITCODE
+}
+'@
+
+$cldFlashPs1 = @'
+Import-Module ClaudeDeepSeek
+Invoke-ClaudeDeepSeekFlash @args
 
 if ($null -ne $LASTEXITCODE) {
     exit $LASTEXITCODE
@@ -179,9 +235,15 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0cld.ps1" %
 exit /b %ERRORLEVEL%
 '@
 
-$claudeDeepSeekCmd = @'
+$cldProCmd = @'
 @echo off
-call "%~dp0cld.cmd" %*
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0cld-pro.ps1" %*
+exit /b %ERRORLEVEL%
+'@
+
+$cldFlashCmd = @'
+@echo off
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0cld-flash.ps1" %*
 exit /b %ERRORLEVEL%
 '@
 
@@ -192,9 +254,12 @@ exit /b %ERRORLEVEL%
 '@
 
 Set-Content -LiteralPath (Join-Path $ShimDir 'cld.ps1') -Value $cldPs1 -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $ShimDir 'cld-pro.ps1') -Value $cldProPs1 -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $ShimDir 'cld-flash.ps1') -Value $cldFlashPs1 -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $ShimDir 'cld-key.ps1') -Value $cldKeyPs1 -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $ShimDir 'cld.cmd') -Value $cldCmd -Encoding ASCII
-Set-Content -LiteralPath (Join-Path $ShimDir 'claude-deepseek.cmd') -Value $claudeDeepSeekCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $ShimDir 'cld-pro.cmd') -Value $cldProCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $ShimDir 'cld-flash.cmd') -Value $cldFlashCmd -Encoding ASCII
 Set-Content -LiteralPath (Join-Path $ShimDir 'cld-key.cmd') -Value $cldKeyCmd -Encoding ASCII
 
 function Test-PathContainsEntry {

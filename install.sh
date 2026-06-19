@@ -42,7 +42,86 @@ fi
 
 ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" \
 ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
+CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash" \
 ANTHROPIC_MODEL="deepseek-v4-pro[1m]" \
+exec claude "$@"
+EOF
+
+cat > "$INSTALL_DIR/cld-pro" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/claude-deepseek"
+ENV_FILE="$CONFIG_DIR/env"
+
+if ! command -v claude >/dev/null 2>&1; then
+  cat >&2 <<'MESSAGE'
+Claude Code CLI was not found on PATH.
+
+Install it first:
+  npm install -g @anthropic-ai/claude-code
+MESSAGE
+  exit 1
+fi
+
+if [ -z "${DEEPSEEK_API_KEY:-}" ] && [ -f "$ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+fi
+
+if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+  cat >&2 <<'MESSAGE'
+DeepSeek API key was not found.
+
+Set it with:
+  cld-key
+MESSAGE
+  exit 1
+fi
+
+ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" \
+ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
+CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash" \
+ANTHROPIC_MODEL="deepseek-v4-pro[1m]" \
+exec claude "$@"
+EOF
+
+cat > "$INSTALL_DIR/cld-flash" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/claude-deepseek"
+ENV_FILE="$CONFIG_DIR/env"
+
+if ! command -v claude >/dev/null 2>&1; then
+  cat >&2 <<'MESSAGE'
+Claude Code CLI was not found on PATH.
+
+Install it first:
+  npm install -g @anthropic-ai/claude-code
+MESSAGE
+  exit 1
+fi
+
+if [ -z "${DEEPSEEK_API_KEY:-}" ] && [ -f "$ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+fi
+
+if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+  cat >&2 <<'MESSAGE'
+DeepSeek API key was not found.
+
+Set it with:
+  cld-key
+MESSAGE
+  exit 1
+fi
+
+ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" \
+ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
+CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash" \
+ANTHROPIC_MODEL="deepseek-v4-flash" \
 exec claude "$@"
 EOF
 
@@ -73,8 +152,8 @@ chmod 600 "$ENV_FILE" 2>/dev/null || true
 echo "DeepSeek API key saved to $ENV_FILE."
 EOF
 
-chmod +x "$INSTALL_DIR/cld" "$INSTALL_DIR/cld-key"
-ln -sf "$INSTALL_DIR/cld" "$INSTALL_DIR/claude-deepseek"
+chmod +x "$INSTALL_DIR/cld" "$INSTALL_DIR/cld-pro" "$INSTALL_DIR/cld-flash" "$INSTALL_DIR/cld-key"
+# No claude-deepseek symlink — use cld, cld-pro, or cld-flash instead
 
 if [ "$SKIP_KEY_PROMPT" != "1" ]; then
   "$INSTALL_DIR/cld-key"
