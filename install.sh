@@ -175,7 +175,9 @@ case ":$PATH:" in
 esac
 
 echo "Open a new terminal, then run:"
-echo "  cld"
+echo "  cld         DeepSeek Pro (main) + Flash (subagents)"
+echo "  cld-pro     same, explicit"
+echo "  cld-flash   DeepSeek Flash (all)"
 echo
 echo "You can update your DeepSeek API key later with:"
 echo "  cld-key"
